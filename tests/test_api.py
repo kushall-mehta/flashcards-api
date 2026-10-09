@@ -180,6 +180,27 @@ def test_review_rejects_out_of_range_quality():
     assert resp.status_code == 422
 
 
+@pytest.mark.parametrize("quality", [True, False])
+def test_review_rejects_boolean_quality(quality):
+    deck = client.post("/decks", json={"name": "Boolean quality"}).json()
+    card = client.post(f"/decks/{deck['id']}/cards", json={"front": "x", "back": "y"}).json()
+
+    resp = client.post(f"/review/{card['id']}", json={"quality": quality})
+
+    assert resp.status_code == 422
+
+
+@pytest.mark.parametrize("quality", [0, 5])
+def test_review_accepts_integer_quality_boundaries(quality):
+    deck = client.post("/decks", json={"name": f"Integer quality {quality}"}).json()
+    card = client.post(f"/decks/{deck['id']}/cards", json={"front": "x", "back": "y"}).json()
+
+    resp = client.post(f"/review/{card['id']}", json={"quality": quality})
+
+    assert resp.status_code == 200
+    assert resp.json()["id"] == card["id"]
+
+
 def test_review_nonexistent_card_404():
     resp = client.post("/review/9999", json={"quality": 4})
     assert resp.status_code == 404
