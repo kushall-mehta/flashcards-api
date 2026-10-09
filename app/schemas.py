@@ -50,6 +50,13 @@ class CardOut(BaseModel):
 class ReviewIn(BaseModel):
     quality: int = Field(ge=0, le=5, description="0 (total blackout) to 5 (perfect recall)")
 
+    @field_validator("quality", mode="before")
+    @classmethod
+    def quality_must_not_be_boolean(cls, value: object) -> object:
+        if isinstance(value, bool):
+            raise ValueError("quality must be an integer, not a boolean")
+        return value
+
 
 class StatsOut(BaseModel):
     total_decks: int
