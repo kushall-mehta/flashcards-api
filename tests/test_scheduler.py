@@ -32,6 +32,49 @@ def test_third_successful_review_multiplies_by_ease_before_this_reviews_update()
     assert result.interval == round(6 * 2.5)  # uses ease as it stood *before* this review
 
 
+def test_fractional_intervals_round_up_through_a_review_sequence():
+    today = date(2024, 1, 1)
+    state = {"ease": 2.5, "interval": 0, "repetitions": 0}
+
+    for quality in (4, 5, 5, 4, 5, 3):
+        result = schedule_review(**state, quality=quality, today=today)
+        state = {
+            "ease": result.ease,
+            "interval": result.interval,
+            "repetitions": result.repetitions,
+        }
+
+    result = schedule_review(**state, quality=3, today=today)
+
+    assert result.interval == 889
+    assert result.due_date == date(2026, 6, 8)
+
+
+def test_half_day_interval_rounds_up_instead_of_to_even():
+    result = schedule_review(
+        ease=2.66,
+        interval=325,
+        repetitions=6,
+        quality=3,
+        today=date(2024, 1, 1),
+    )
+
+    assert result.interval == 865
+    assert result.due_date == date(2026, 5, 15)
+
+
+def test_float_noise_does_not_add_a_day_to_an_integer_interval():
+    result = schedule_review(
+        ease=2.7 + 0.1,
+        interval=10,
+        repetitions=4,
+        quality=4,
+        today=date(2024, 1, 1),
+    )
+
+    assert result.interval == 28
+
+
 def test_quality_4_leaves_ease_unchanged():
     result = schedule_review(ease=2.5, interval=6, repetitions=2, quality=4)
     assert result.ease == 2.5

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, timedelta
+from math import ceil
 
 from .utils import today_utc
 
@@ -29,8 +30,8 @@ def schedule_review(
     quality < 3 is a lapse: repetitions and interval reset, ease is left
     untouched (only a successful recall adjusts ease). quality >= 3 advances
     the schedule -- 1 day after the first successful review, 6 after the
-    second, and `previous_interval * ease` after that, using the ease factor
-    as it stood *before* this review updates it.
+    second, and `ceil(previous_interval * ease)` after that, using the ease
+    factor as it stood *before* this review updates it.
     """
     if not 0 <= quality <= 5:
         raise ValueError(f"quality must be between 0 and 5, got {quality}")
@@ -46,7 +47,7 @@ def schedule_review(
         elif repetitions == 2:
             interval = 6
         else:
-            interval = round(interval * ease)
+            interval = ceil(round(interval * ease, 9))
         ease = max(MIN_EASE, ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)))
 
     return ScheduleResult(
