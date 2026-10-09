@@ -47,7 +47,7 @@ def schedule_review(
         elif repetitions == 2:
             interval = 6
         else:
-            interval = ceil(interval * ease)
+            interval = ceil(round(interval * ease, 9))
         ease = max(MIN_EASE, ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)))
 
     return ScheduleResult(
