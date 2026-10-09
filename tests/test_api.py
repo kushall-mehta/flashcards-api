@@ -63,6 +63,11 @@ def test_empty_deck_name_is_rejected():
     assert resp.status_code == 422
 
 
+def test_whitespace_only_deck_name_is_rejected():
+    resp = client.post("/decks", json={"name": "   \t\n"})
+    assert resp.status_code == 422
+
+
 def test_card_crud_within_a_deck():
     deck = client.post("/decks", json={"name": "Math"}).json()
     resp = client.post(f"/decks/{deck['id']}/cards", json={"front": "2+2", "back": "4"})
@@ -79,6 +84,30 @@ def test_card_crud_within_a_deck():
 
     assert client.delete(f"/cards/{card['id']}").status_code == 204
     assert client.get(f"/decks/{deck['id']}/cards").json() == []
+
+
+@pytest.mark.parametrize("field", ["front", "back"])
+def test_whitespace_only_card_text_is_rejected(field):
+    deck = client.post("/decks", json={"name": "Card validation"}).json()
+    payload = {"front": "question", "back": "answer"}
+    payload[field] = "   \t\n"
+
+    resp = client.post(f"/decks/{deck['id']}/cards", json=payload)
+    assert resp.status_code == 422
+
+
+def test_nonblank_input_preserves_surrounding_whitespace():
+    deck = client.post("/decks", json={"name": " Spanish "})
+    assert deck.status_code == 201
+    assert deck.json()["name"] == " Spanish "
+
+    card = client.post(
+        f"/decks/{deck.json()['id']}/cards",
+        json={"front": " perro ", "back": " dog "},
+    )
+    assert card.status_code == 201
+    assert card.json()["front"] == " perro "
+    assert card.json()["back"] == " dog "
 
 
 def test_deleting_a_deck_cascades_to_its_cards():

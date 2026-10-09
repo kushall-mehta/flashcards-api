@@ -1,10 +1,17 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class DeckCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
+
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("name must not be blank")
+        return value
 
 
 class DeckOut(BaseModel):
@@ -17,6 +24,13 @@ class DeckOut(BaseModel):
 class CardCreate(BaseModel):
     front: str = Field(min_length=1)
     back: str = Field(min_length=1)
+
+    @field_validator("front", "back")
+    @classmethod
+    def card_text_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("card text must not be blank")
+        return value
 
 
 class CardOut(BaseModel):
