@@ -4,15 +4,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.database import get_db
+from app.database import configure_sqlite_foreign_keys, get_db
 from app.main import app
-from app.models import Base
+from app.models import Base, Card, Deck
+from app.routers import cards as card_routes
 
 engine = create_engine(
     "sqlite:///:memory:",
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+configure_sqlite_foreign_keys(engine)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -125,6 +127,28 @@ def test_deleting_a_deck_cascades_to_its_cards():
 def test_cards_require_an_existing_deck():
     resp = client.post("/decks/9999/cards", json={"front": "x", "back": "y"})
     assert resp.status_code == 404
+
+
+def test_card_creation_returns_404_if_deck_disappears_after_validation(monkeypatch):
+    deck = client.post("/decks", json={"name": "Deleted before card insert"}).json()
+    get_deck = card_routes.get_deck_or_404
+
+    def delete_deck_after_validation(deck_id, db):
+        found_deck = get_deck(deck_id, db)
+        db.delete(found_deck)
+        db.commit()
+        return found_deck
+
+    monkeypatch.setattr(card_routes, "get_deck_or_404", delete_deck_after_validation)
+    response = client.post(
+        f"/decks/{deck['id']}/cards", json={"front": "question", "back": "answer"}
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "deck not found"}
+    with TestingSessionLocal() as db:
+        assert db.get(Deck, deck["id"]) is None
+        assert db.query(Card).filter(Card.deck_id == deck["id"]).count() == 0
 
 
 def test_review_flow_advances_the_schedule():
