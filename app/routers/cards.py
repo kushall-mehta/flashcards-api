@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -22,7 +23,13 @@ def create_card(
     get_deck_or_404(deck_id, db)
     db_card = models.Card(deck_id=deck_id, front=card.front, back=card.back)
     db.add(db_card)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        if db.get(models.Deck, deck_id) is None:
+            raise HTTPException(status_code=404, detail="deck not found")
+        raise
     db.refresh(db_card)
     return db_card
 
