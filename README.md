@@ -90,8 +90,9 @@ blackout) to 5 (perfect). `app/scheduler.py`'s `schedule_review()` then:
   day. `ease` is left untouched — a single bad review shouldn't permanently
   brand a card as "hard."
 - **quality >= 3 (a pass):** `repetitions` increments, and `interval` becomes
-  1 day (1st success), 6 days (2nd), or `round(previous_interval * ease)`
-  (3rd onward) — each successful review pushes the next one further out.
+  1 day (1st success), 6 days (2nd), or `ceil(previous_interval * ease)`
+  (3rd onward), rounding fractional days up — each successful review pushes
+  the next one further out.
   `ease` is then nudged by how *good* the recall was: quality 5 increases it
   (the card gets easier, so it's shown less often), quality 3 decreases it
   slightly, with a floor of 1.3 so a card never gets scheduled into
